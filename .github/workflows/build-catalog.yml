@@ -60,11 +60,24 @@ jobs:
 
       - name: Build and push Extension Catalog Image
         if: github.event_name == 'release'
+        id: build
         run: |
           # Use timestamp for ttl.sh image tag (1 hour expiry)
           TIMESTAMP=$(date +%s)
-          yarn publish-pkgs -c -p -r ttl.sh -o anonymous -t ${TIMESTAMP}:1h
+          IMAGE_URL="ttl.sh/anonymous/rancher-support-ui:${TIMESTAMP}-1h"
           
-          echo "::notice::Extension published to ttl.sh/anonymous/rancher-support-ui:${TIMESTAMP}:1h"
-          echo "::notice::Image will be available for 1 hour"
-          echo "::notice::Install URL: ttl.sh/anonymous/rancher-support-ui:${TIMESTAMP}:1h"
+          echo "Building and pushing to ${IMAGE_URL}"
+          yarn publish-pkgs -c -p -r ttl.sh -o anonymous -t ${TIMESTAMP}-1h
+          
+          echo "image_url=${IMAGE_URL}" >> $GITHUB_OUTPUT
+          echo "## 🚀 Extension Published!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Image URL:** \`${IMAGE_URL}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Expires:** 1 hour from now" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Install in Rancher:" >> $GITHUB_STEP_SUMMARY
+          echo "1. Go to ☰ → Extensions → Available" >> $GITHUB_STEP_SUMMARY
+          echo "2. Click ⋮ → Install Extension" >> $GITHUB_STEP_SUMMARY
+          echo "3. Enter: \`${IMAGE_URL}\`" >> $GITHUB_STEP_SUMMARY
+          echo "4. Click Install" >> $GITHUB_STEP_SUMMARY
