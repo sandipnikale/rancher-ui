@@ -35,12 +35,12 @@ jobs:
       - name: Install Yarn
         run: npm install -g yarn
 
-      - name: Login to GitHub Container Registry
+      - name: Login to ttl.sh Registry
         uses: docker/login-action@v3
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          registry: ttl.sh
+          username: anonymous
+          password: anonymous
 
       - name: Setup Helm
         uses: azure/setup-helm@v4
@@ -51,6 +51,7 @@ jobs:
         run: yarn install
 
       - name: Parse Extension Name
+        if: github.event_name == 'release' && startsWith(github.ref_name, 'rancher-support-ui-')
         id: parsed-name
         env:
           GH_TOKEN: ${{ github.token }}
@@ -58,5 +59,12 @@ jobs:
           yarn parse-tag-name ${{ github.ref_name }} ${{ github.run_id }} "catalog"
 
       - name: Build and push Extension Catalog Image
+        if: github.event_name == 'release'
         run: |
-          yarn publish-pkgs -c -p -r ghcr.io -o ${{ github.repository_owner }} -t ${{ github.ref_name }}
+          # Use timestamp for ttl.sh image tag (1 hour expiry)
+          TIMESTAMP=$(date +%s)
+          yarn publish-pkgs -c -p -r ttl.sh -o anonymous -t ${TIMESTAMP}:1h
+          
+          echo "::notice::Extension published to ttl.sh/anonymous/rancher-support-ui:${TIMESTAMP}:1h"
+          echo "::notice::Image will be available for 1 hour"
+          echo "::notice::Install URL: ttl.sh/anonymous/rancher-support-ui:${TIMESTAMP}:1h"
