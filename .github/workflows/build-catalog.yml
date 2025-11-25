@@ -50,6 +50,13 @@ jobs:
       - name: Install dependencies
         run: yarn install
 
+      - name: Debug Event Info
+        run: |
+          echo "Event Name: ${{ github.event_name }}"
+          echo "Ref Name: ${{ github.ref_name }}"
+          echo "Is Release: ${{ github.event_name == 'release' }}"
+          echo "Is Dispatch: ${{ github.event_name == 'workflow_dispatch' }}"
+
       - name: Parse Extension Name
         if: github.event_name == 'release' && startsWith(github.ref_name, 'rancher-support-ui-')
         id: parsed-name
@@ -59,7 +66,7 @@ jobs:
           yarn parse-tag-name ${{ github.ref_name }} ${{ github.run_id }} "catalog"
 
       - name: Build and push Extension Catalog Image
-        if: github.event_name == 'release'
+        if: github.event_name == 'release' || github.event_name == 'workflow_dispatch'
         id: build
         run: |
           # Use timestamp for ttl.sh image tag (1 hour expiry)
