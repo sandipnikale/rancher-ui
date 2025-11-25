@@ -1,0 +1,27 @@
+{
+  "rancherSupportBundle": {
+    "label": "Support Bundle",
+    "labelPlural": "Support Bundles",
+    "clusters": {
+      "label": "Clusters",
+      "add": "Add Cluster"
+    },
+    "storageClassName": {
+      "label": "Storage Class Name",
+      "placeholder": "Enter storage class name (optional)"
+    },
+    "state": {
+      "label": "State"
+    },
+    "download": {
+      "label": "Download Bundle",
+      "notReady": "Bundle is not ready for download yet"
+    }
+  },
+  "tableHeaders": {
+    "clusters": "Clusters",
+    "bundleState": "Bundle State",
+    "message": "Message",
+    "cluster": "Cluster Name"
+  }
+}
