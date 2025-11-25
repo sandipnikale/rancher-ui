@@ -57,34 +57,57 @@ jobs:
           echo "Is Release: ${{ github.event_name == 'release' }}"
           echo "Is Dispatch: ${{ github.event_name == 'workflow_dispatch' }}"
 
-      - name: Parse Extension Name
-        if: github.event_name == 'release' && startsWith(github.ref_name, 'rancher-support-ui-')
-        id: parsed-name
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          yarn parse-tag-name ${{ github.ref_name }} ${{ github.run_id }} "catalog"
+      - name: Build Extension Package
+        run: yarn build-pkg rancher-support-ui
 
-      - name: Build and push Extension Catalog Image
-        if: github.event_name == 'release' || github.event_name == 'workflow_dispatch'
+      - name: Build and Push Docker Image
         id: build
         run: |
           # Use timestamp for ttl.sh image tag (1 hour expiry)
-          TIMESTAMP=$(date +%s)
-          IMAGE_URL="ttl.sh/anonymous/rancher-support-ui:${TIMESTAMP}-1h"
+          # If it's a release, use the tag name, otherwise use timestamp
+          if [[ "${{ github.event_name }}" == "release" ]]; then
+            TAG="${{ github.ref_name }}"
+          else
+            TAG="$(date +%s)-1h"
+          fi
           
-          echo "Building and pushing to ${IMAGE_URL}"
-          yarn publish-pkgs -c -p -r ttl.sh -o anonymous -t ${TIMESTAMP}-1h
+          IMAGE="ttl.sh/anonymous/rancher-support-ui:${TAG}"
           
-          echo "image_url=${IMAGE_URL}" >> $GITHUB_OUTPUT
+          echo "Building Docker image..."
+          
+          # Create Dockerfile for the catalog image
+          cat > Dockerfile.catalog <<EOF
+          FROM nginx:alpine
+          COPY dist-pkg /usr/share/nginx/html/
+          COPY index.html /usr/share/nginx/html/
+          RUN cat > /etc/nginx/conf.d/default.conf <<'NGINX'
+          server {
+              listen 80;
+              server_name _;
+              location / {
+                  root /usr/share/nginx/html;
+                  autoindex on;
+                  autoindex_exact_size off;
+                  autoindex_localtime on;
+                  add_header Access-Control-Allow-Origin * always;
+                  add_header Access-Control-Allow-Methods "GET, OPTIONS" always;
+                  add_header Access-Control-Allow-Headers "Content-Type" always;
+              }
+          }
+          NGINX
+          EOF
+          
+          docker build -f Dockerfile.catalog -t ${IMAGE} .
+          docker push ${IMAGE}
+          
+          echo "image_url=${IMAGE}" >> $GITHUB_OUTPUT
+          
           echo "## 🚀 Extension Published!" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Image URL:** \`${IMAGE_URL}\`" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Expires:** 1 hour from now" >> $GITHUB_STEP_SUMMARY
+          echo "**Image URL:** \`${IMAGE}\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Install in Rancher:" >> $GITHUB_STEP_SUMMARY
           echo "1. Go to ☰ → Extensions → Available" >> $GITHUB_STEP_SUMMARY
           echo "2. Click ⋮ → Install Extension" >> $GITHUB_STEP_SUMMARY
-          echo "3. Enter: \`${IMAGE_URL}\`" >> $GITHUB_STEP_SUMMARY
+          echo "3. Enter: \`${IMAGE}\`" >> $GITHUB_STEP_SUMMARY
           echo "4. Click Install" >> $GITHUB_STEP_SUMMARY
